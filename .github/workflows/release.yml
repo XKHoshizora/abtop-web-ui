@@ -43,25 +43,25 @@ jobs:
       # resolves (web-ui/ + abtop/ under the workspace). On workflow_dispatch, build
       # the requested tag's source; on tag push, the pushed tag.
       - name: Checkout abtop-web-ui
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: web-ui
           ref: ${{ inputs.tag || github.ref }}
 
       - name: Checkout abtop fork
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: XKHoshizora/abtop
           ref: master
           path: abtop
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 10
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: pnpm
@@ -88,7 +88,7 @@ jobs:
           if command -v sha256sum >/dev/null; then sha256sum "$PKG" > "$PKG.sha256"; else shasum -a 256 "$PKG" > "$PKG.sha256"; fi
 
       - name: Upload to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           files: |
