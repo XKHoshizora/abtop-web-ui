@@ -1,0 +1,21 @@
+[package]
+name = "abtop-web-ui"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Local-first web UI for the abtop AI-agent monitor"
+license = "MIT"
+repository = "https://github.com/XKHoshizora/abtop-web-ui"
+
+[dependencies]
+# Reuse abtop's data-collection layer in-process (no subprocess, no re-scan).
+# Uses a local path during development; switch to a git dependency to build
+# against the published fork:
+#   abtop = { git = "https://github.com/XKHoshizora/abtop" }
+abtop = { path = "../abtop" }
+tiny_http = "0.12"
+serde_json = "1"
+# Embed the built SPA (web/dist) into the binary; run `pnpm build` in web/ first.
+rust-embed = "8"
+# Cryptographic randomness for session tokens.
+getrandom = "0.2"

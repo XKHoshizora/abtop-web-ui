@@ -1,0 +1,79 @@
+name: Release
+
+# Build prebuilt binaries and publish them to a GitHub Release on a version tag.
+# abtop-web-ui needs TWO build steps (frontend then Rust) and the abtop fork as a
+# sibling crate, so this is hand-written rather than cargo-dist.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+          - target: x86_64-apple-darwin
+            os: macos-13
+          - target: aarch64-apple-darwin
+            os: macos-14
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Check out both crates as siblings so Cargo.toml's `abtop = { path = "../abtop" }`
+      # resolves (web-ui/ + abtop/ under the workspace).
+      - name: Checkout abtop-web-ui
+        uses: actions/checkout@v4
+        with:
+          path: web-ui
+
+      - name: Checkout abtop fork
+        uses: actions/checkout@v4
+        with:
+          repository: XKHoshizora/abtop
+          ref: master
+          path: abtop
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web-ui/web/pnpm-lock.yaml
+
+      - name: Build frontend
+        working-directory: web-ui/web
+        run: pnpm install --frozen-lockfile && pnpm build
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build binary
+        working-directory: web-ui
+        run: cargo build --release
+
+      - name: Package
+        working-directory: web-ui
+        run: |
+          PKG="abtop-web-ui-${{ matrix.target }}.tar.gz"
+          tar -czf "$PKG" -C target/release abtop-web-ui
+          if command -v sha256sum >/dev/null; then sha256sum "$PKG" > "$PKG.sha256"; else shasum -a 256 "$PKG" > "$PKG.sha256"; fi
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            web-ui/abtop-web-ui-${{ matrix.target }}.tar.gz
+            web-ui/abtop-web-ui-${{ matrix.target }}.tar.gz.sha256
