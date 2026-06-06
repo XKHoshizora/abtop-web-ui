@@ -3,10 +3,22 @@ name: Release
 # Build prebuilt binaries and publish them to a GitHub Release on a version tag.
 # abtop-web-ui needs TWO build steps (frontend then Rust) and the abtop fork as a
 # sibling crate, so this is hand-written rather than cargo-dist.
+#
+# Every target builds target-aware (`cargo build --target`). x86_64 macOS is
+# cross-compiled on the Apple-Silicon runner: the macos-13 (Intel) image is
+# retired, so a plain macos-13 job queues forever (that asset was missing from
+# v0.1.1/v0.1.2). The workflow_dispatch `tag` input rebuilds + reuploads assets
+# for an existing release tag (it checks out that tag's source but runs with this
+# fixed workflow definition).
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to (re)build assets for, e.g. v0.1.2'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -22,17 +34,19 @@ jobs:
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-14
           - target: aarch64-apple-darwin
             os: macos-14
     runs-on: ${{ matrix.os }}
     steps:
       # Check out both crates as siblings so Cargo.toml's `abtop = { path = "../abtop" }`
-      # resolves (web-ui/ + abtop/ under the workspace).
+      # resolves (web-ui/ + abtop/ under the workspace). On workflow_dispatch, build
+      # the requested tag's source; on tag push, the pushed tag.
       - name: Checkout abtop-web-ui
         uses: actions/checkout@v4
         with:
           path: web-ui
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Checkout abtop fork
         uses: actions/checkout@v4
@@ -59,21 +73,24 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Build binary
         working-directory: web-ui
-        run: cargo build --release
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Package
         working-directory: web-ui
         run: |
           PKG="abtop-web-ui-${{ matrix.target }}.tar.gz"
-          tar -czf "$PKG" -C target/release abtop-web-ui
+          tar -czf "$PKG" -C "target/${{ matrix.target }}/release" abtop-web-ui
           if command -v sha256sum >/dev/null; then sha256sum "$PKG" > "$PKG.sha256"; else shasum -a 256 "$PKG" > "$PKG.sha256"; fi
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
           files: |
             web-ui/abtop-web-ui-${{ matrix.target }}.tar.gz
             web-ui/abtop-web-ui-${{ matrix.target }}.tar.gz.sha256
