@@ -321,6 +321,10 @@ fn parse(args: &[String]) -> Result<Opts, String> {
                 print_help();
                 std::process::exit(0);
             }
+            "-V" | "--version" => {
+                crate::print_version();
+                std::process::exit(0);
+            }
             "--domain" => o.domain = it.next().cloned(),
             "--password" => o.password = it.next().cloned().filter(|s| !s.is_empty()),
             "--username" => o.username = it.next().cloned().filter(|s| !s.is_empty()),

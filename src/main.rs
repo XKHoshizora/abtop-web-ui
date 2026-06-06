@@ -63,6 +63,10 @@ fn parse_args() -> Args {
                 print_help();
                 std::process::exit(0);
             }
+            "-V" | "--version" => {
+                print_version();
+                std::process::exit(0);
+            }
             other => {
                 eprintln!("abtop-web-ui: unknown argument '{}'", other);
                 print_help();
@@ -81,9 +85,13 @@ fn parse_args() -> Args {
     }
 }
 
+fn print_version() {
+    println!("abtop-web-ui {}", env!("CARGO_PKG_VERSION"));
+}
+
 fn print_help() {
     println!(
-        "abtop-web-ui — local web UI for abtop\n\n\
+        "abtop-web-ui {ver} — local web UI for abtop\n\n\
          USAGE:\n  abtop-web-ui [--host <ip>] [--port <n>] [--interval <secs>] [--open]\n  \
          abtop-web-ui deploy [--local | --public --domain <host>]   (install a systemd service)\n\n\
          OPTIONS:\n  \
@@ -94,11 +102,13 @@ fn print_help() {
          --demo             Serve abtop's demo fixture (no live agents needed)\n  \
          --password <pw>    Require login (or ABTOP_WEB_PASSWORD; user via\n                     \
          ABTOP_WEB_USERNAME, default 'admin')\n  \
-         -h, --help         Show this help\n\n\
+         -h, --help         Show this help\n  \
+         -V, --version      Show version\n\n\
          The dashboard binds to localhost by default. For remote access, prefer\n\
          an SSH tunnel or a TLS-terminating reverse proxy — the snapshot exposes\n\
          working directories, ports and (best-effort redacted) prompt text.\n\
          A password over plain HTTP is sniffable; always pair it with TLS.",
+        ver = env!("CARGO_PKG_VERSION"),
         host = DEFAULT_HOST,
         port = DEFAULT_PORT,
         interval = DEFAULT_INTERVAL_SECS,
@@ -117,11 +127,19 @@ fn open_browser(url: &str) {
 }
 
 fn main() {
-    // `deploy` is a subcommand with its own argument parser.
+    // `deploy` is a subcommand with its own argument parser; `version` is a
+    // friendly alias for the `-V` / `--version` flags handled in parse_args.
     let argv: Vec<String> = std::env::args().collect();
-    if argv.get(1).map(String::as_str) == Some("deploy") {
-        deploy::run(&argv[2..]);
-        return;
+    match argv.get(1).map(String::as_str) {
+        Some("deploy") => {
+            deploy::run(&argv[2..]);
+            return;
+        }
+        Some("version" | "-V" | "--version") => {
+            print_version();
+            return;
+        }
+        _ => {}
     }
 
     let args = parse_args();
