@@ -150,6 +150,36 @@ abtop-web-ui deploy --dry-run --public --domain ...  # 只打印计划,什么都
 `admin`)、`--user <u>`(服务运行用户)、`-y` / `--yes`(非交互,默认 `--local`)。会把二进制装到
 `/usr/local/bin/abtop-web-ui`,unit 装到 `/etc/systemd/system/abtop-web-ui.service`。
 
+## 卸载
+
+用 `abtop-web-ui deploy` 装成服务的,一条命令卸载:
+
+```bash
+abtop-web-ui uninstall             # 停止+禁用服务,删除 unit、env 文件和二进制
+abtop-web-ui uninstall --keep-bin  # ……但保留二进制
+abtop-web-ui uninstall --dry-run   # 只打印计划,什么都不改
+abtop-web-ui uninstall -y          # 非交互(跳过确认)
+```
+
+特权步骤在非 root 时使用 `sudo`。它会停止并禁用服务、删除
+`/etc/systemd/system/abtop-web-ui.service`、执行 `systemctl daemon-reload`、删除
+`/etc/abtop-web-ui.env`,并且——除非 `--keep-bin`——删除位于
+`/usr/local/bin/abtop-web-ui` 的二进制(以及当前正在运行的可执行文件,例如
+`install.sh` 装在 `~/.local/bin` 的那份)。
+
+等价的手动步骤(没有该子命令的旧二进制):
+
+```bash
+sudo systemctl disable --now abtop-web-ui
+sudo rm -f /etc/systemd/system/abtop-web-ui.service /etc/abtop-web-ui.env /usr/local/bin/abtop-web-ui
+sudo systemctl daemon-reload
+rm -f ~/.local/bin/abtop-web-ui          # 如果你用 install.sh 装过
+```
+
+如果你用 `deploy --caddy-append` 对外暴露过,还要从 `/etc/caddy/Caddyfile` 移除 abtop
+的 `reverse_proxy` vhost 段并重载 Caddy(`sudo systemctl reload caddy`)——`uninstall`
+不会改你的 Caddyfile。追加前的备份在 `/etc/caddy/Caddyfile.bak-abtop-deploy`。
+
 ## 从源码构建
 
 前端(`web/`,Vite + React + TS + Ant Design)会被构建到 `web/dist` 并**内嵌进 Rust 二进制**,

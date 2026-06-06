@@ -362,3 +362,133 @@ fn print_help() {
          also run `abtop --setup`."
     );
 }
+
+// --- uninstall (the inverse of `deploy`) ---
+
+struct UninstallOpts {
+    keep_bin: bool,
+    dry_run: bool,
+    yes: bool,
+}
+
+/// `abtop-web-ui uninstall` — stop + disable the service, remove the unit,
+/// credentials and (unless --keep-bin) the binary. Caddy is left untouched — we
+/// only point at the vhost to remove. Linux-only, like `deploy`.
+pub fn uninstall(args: &[String]) {
+    if !cfg!(target_os = "linux") {
+        eprintln!("`uninstall` removes a systemd service and is Linux-only. On other");
+        eprintln!("platforms just delete the binary, e.g.:");
+        eprintln!("  rm -f {BIN_PATH} ~/.local/bin/abtop-web-ui");
+        std::process::exit(1);
+    }
+
+    let o = match parse_uninstall(args) {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("{e}\n");
+            print_uninstall_help();
+            std::process::exit(2);
+        }
+    };
+
+    let root = is_root();
+    // The deploy copy lives at BIN_PATH; the running exe may be a second copy
+    // (e.g. ~/.local/bin from install.sh) — remove that too.
+    let exe = std::env::current_exe().ok().map(|p| p.to_string_lossy().into_owned());
+
+    eprintln!("\nabtop-web-ui uninstall\n");
+    eprintln!("This will:");
+    eprintln!("  • stop + disable the systemd service abtop-web-ui");
+    eprintln!("  • remove {UNIT_PATH}  (+ systemctl daemon-reload)");
+    eprintln!("  • remove {ENV_PATH}  (credentials, if present)");
+    if o.keep_bin {
+        eprintln!("  • keep the binary (--keep-bin)");
+    } else {
+        eprintln!("  • remove the binary at {BIN_PATH}");
+        if let Some(e) = exe.as_deref() {
+            if e != BIN_PATH {
+                eprintln!("    and this running binary: {e}");
+            }
+        }
+    }
+    eprintln!();
+
+    if !o.dry_run && !o.yes && io::stdin().is_terminal() && !prompt("Continue? [y/N] ").eq_ignore_ascii_case("y") {
+        eprintln!("aborted.");
+        return;
+    }
+
+    // 1. stop + disable, clear any failed state (best-effort; ignores "not loaded").
+    run_root(&["systemctl", "disable", "--now", "abtop-web-ui"], o.dry_run, root);
+    run_root(&["systemctl", "reset-failed", "abtop-web-ui"], o.dry_run, root);
+    // 2. unit, then reload.
+    run_root(&["rm", "-f", UNIT_PATH], o.dry_run, root);
+    run_root(&["systemctl", "daemon-reload"], o.dry_run, root);
+    // 3. credentials.
+    run_root(&["rm", "-f", ENV_PATH], o.dry_run, root);
+    // 4. binaries: the deploy copy, plus this running exe if it is a different file.
+    if !o.keep_bin {
+        run_root(&["rm", "-f", BIN_PATH], o.dry_run, root);
+        if let Some(e) = exe.as_deref() {
+            if e != BIN_PATH {
+                run_root(&["rm", "-f", e], o.dry_run, root);
+            }
+        }
+    }
+
+    // 5. Caddy: detect (a leftover deploy backup is the reliable signal), never edit.
+    if std::path::Path::new(&format!("{CADDYFILE}.bak-abtop-deploy")).exists() {
+        eprintln!("\n  ⚠ You exposed abtop-web-ui publicly with `deploy --caddy-append`.");
+        eprintln!("    uninstall does NOT edit your Caddyfile — remove the abtop vhost");
+        eprintln!("    (a `reverse_proxy 127.0.0.1:<port>` block) from {CADDYFILE}, then:");
+        eprintln!("      sudo systemctl reload caddy");
+        eprintln!("    A pre-append backup is at {CADDYFILE}.bak-abtop-deploy");
+    }
+
+    if o.dry_run {
+        eprintln!("\n(dry run — nothing changed)");
+    } else {
+        eprintln!("\n✓ abtop-web-ui uninstalled.");
+        if o.keep_bin {
+            eprintln!("  (binary kept — remove later with: sudo rm -f {BIN_PATH}; rm -f ~/.local/bin/abtop-web-ui)");
+        }
+    }
+}
+
+fn parse_uninstall(args: &[String]) -> Result<UninstallOpts, String> {
+    let mut o = UninstallOpts { keep_bin: false, dry_run: false, yes: false };
+    for a in args {
+        match a.as_str() {
+            "--keep-bin" => o.keep_bin = true,
+            "--dry-run" => o.dry_run = true,
+            "-y" | "--yes" => o.yes = true,
+            "-h" | "--help" => {
+                print_uninstall_help();
+                std::process::exit(0);
+            }
+            "-V" | "--version" => {
+                crate::print_version();
+                std::process::exit(0);
+            }
+            other => return Err(format!("unknown uninstall argument '{other}'")),
+        }
+    }
+    Ok(o)
+}
+
+fn print_uninstall_help() {
+    println!(
+        "abtop-web-ui uninstall — remove the systemd service (Linux)\n\n\
+         USAGE:\n  abtop-web-ui uninstall [--keep-bin] [--dry-run] [-y]\n\n\
+         Stops and disables the service, removes the unit ({UNIT_PATH}), runs\n\
+         `systemctl daemon-reload`, deletes the credentials file ({ENV_PATH}) and —\n\
+         unless --keep-bin — the binary at {BIN_PATH} (and this running executable).\n\n\
+         OPTIONS:\n  \
+         --keep-bin   keep the installed binary; only remove the service\n  \
+         --dry-run    print everything it would do, change nothing\n  \
+         -y, --yes    non-interactive (skip the confirmation prompt)\n\n\
+         Privileged steps use sudo unless already root. If you used\n\
+         `deploy --caddy-append`, remove the abtop vhost from /etc/caddy/Caddyfile\n\
+         yourself and reload Caddy — uninstall won't touch it."
+    );
+}

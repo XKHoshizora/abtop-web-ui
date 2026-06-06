@@ -166,6 +166,38 @@ Other deploy flags: `--port <n>` (default 8787), `--password <pw>`, `--username 
 defaults to `--local`). Installs the binary to `/usr/local/bin/abtop-web-ui` and the
 unit to `/etc/systemd/system/abtop-web-ui.service`.
 
+## Uninstall
+
+Installed as a service with `abtop-web-ui deploy`? Remove it with one command:
+
+```bash
+abtop-web-ui uninstall             # stop + disable the service, remove the unit,
+                                   # env file and binary
+abtop-web-ui uninstall --keep-bin  # ...but keep the binary
+abtop-web-ui uninstall --dry-run   # print the plan, change nothing
+abtop-web-ui uninstall -y          # non-interactive (skip the confirmation)
+```
+
+Privileged steps use `sudo` unless you are already root. It stops and disables the
+service, deletes `/etc/systemd/system/abtop-web-ui.service`, runs `systemctl
+daemon-reload`, removes `/etc/abtop-web-ui.env`, and — unless `--keep-bin` — the
+binary at `/usr/local/bin/abtop-web-ui` (and the running executable, e.g. the
+`~/.local/bin` copy from `install.sh`).
+
+Equivalent manual steps (for older binaries without the subcommand):
+
+```bash
+sudo systemctl disable --now abtop-web-ui
+sudo rm -f /etc/systemd/system/abtop-web-ui.service /etc/abtop-web-ui.env /usr/local/bin/abtop-web-ui
+sudo systemctl daemon-reload
+rm -f ~/.local/bin/abtop-web-ui          # if you installed via install.sh
+```
+
+If you exposed it publicly with `deploy --caddy-append`, also remove the abtop
+`reverse_proxy` vhost from `/etc/caddy/Caddyfile` and reload Caddy
+(`sudo systemctl reload caddy`) — `uninstall` won't touch your Caddyfile. A
+pre-append backup is at `/etc/caddy/Caddyfile.bak-abtop-deploy`.
+
 ## Build from source
 
 The frontend (`web/`, Vite + React + TypeScript + Ant Design) is built to `web/dist`

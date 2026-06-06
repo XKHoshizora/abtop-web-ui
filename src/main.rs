@@ -93,7 +93,8 @@ fn print_help() {
     println!(
         "abtop-web-ui {ver} — local web UI for abtop\n\n\
          USAGE:\n  abtop-web-ui [--host <ip>] [--port <n>] [--interval <secs>] [--open]\n  \
-         abtop-web-ui deploy [--local | --public --domain <host>]   (install a systemd service)\n\n\
+         abtop-web-ui deploy [--local | --public --domain <host>]   (install a systemd service)\n  \
+         abtop-web-ui uninstall                                     (remove the systemd service)\n\n\
          OPTIONS:\n  \
          --host <ip>        Bind address (default {host})\n  \
          --port <n>         Bind port (default {port})\n  \
@@ -133,6 +134,10 @@ fn main() {
     match argv.get(1).map(String::as_str) {
         Some("deploy") => {
             deploy::run(&argv[2..]);
+            return;
+        }
+        Some("uninstall") => {
+            deploy::uninstall(&argv[2..]);
             return;
         }
         Some("version" | "-V" | "--version") => {
