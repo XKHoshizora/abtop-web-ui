@@ -95,6 +95,49 @@ Prebuilt binaries are published to
 [GitHub Releases](https://github.com/XKHoshizora/abtop-web-ui/releases) by the
 release workflow on each `v*` tag. (Windows: build from source.)
 
+## 🤖 Install with an AI agent
+
+Letting an AI coding agent set this up for you? Copy the prompt below to **Claude Code**,
+**Codex**, **OpenCode** (or any agent) — it installs the binary, asks how you want to run
+it, and once you approve the plan, carries it out for you.
+
+```text
+You are setting up **abtop-web-ui** on this machine for me. It's a local-first web
+dashboard that monitors every AI coding agent running on *this host* (Claude Code,
+Codex CLI, OpenCode) — status, tokens, context, ports, MCP servers — streamed to a
+browser behind a login page. Project: https://github.com/XKHoshizora/abtop-web-ui
+
+Canonical sources (read these first if you can fetch URLs; otherwise follow the steps):
+- README:    https://github.com/XKHoshizora/abtop-web-ui#readme
+- Installer:  https://raw.githubusercontent.com/XKHoshizora/abtop-web-ui/master/install.sh
+
+Install (Linux / macOS, x86_64 / arm64):
+  curl --proto '=https' --tlsv1.2 -LsSf https://raw.githubusercontent.com/XKHoshizora/abtop-web-ui/master/install.sh | sh
+It drops the binary in ~/.local/bin (prebuilt binaries bundle everything — no extra
+deps). On Windows, build from source per the README. Then verify with
+`abtop-web-ui --version`, and offer me a no-data demo: `abtop-web-ui --demo --open`.
+
+Then ask me how I want to run it:
+- Foreground / just try it:  abtop-web-ui --open   -> http://127.0.0.1:8787
+- Install as a background service (`abtop-web-ui deploy`, systemd, Linux): ask whether I want
+    - local  — binds 127.0.0.1, no password; I reach it via an SSH tunnel, or
+    - public — generates a password and prints (or, with --caddy-append, writes) a
+               Caddy TLS reverse-proxy vhost for a domain I give you.
+
+Rules — follow these:
+- It's local-first: it can only watch agents on *this* machine, and the service must
+  run as the SAME user that owns the agent processes (it reads that user's ~/.claude
+  and /proc). Run it as me, never as root.
+- `deploy` runs privileged steps with sudo (systemd, Caddy). First show me the plan —
+  run `abtop-web-ui deploy --dry-run <flags>` and let me read it — and only execute
+  privileged or public-exposure steps after I approve.
+- Never expose it publicly without TLS AND a password. The snapshot contains cwd
+  paths, ports, PIDs and (redacted) prompt text.
+
+Once I've approved the plan, carry it out yourself — run the commands, handle
+PATH/sudo, and report back when the dashboard is reachable.
+```
+
 ## Deploy as a service
 
 `abtop-web-ui deploy` installs a systemd service (Linux). It asks whether you want
@@ -162,14 +205,37 @@ any frontend change, run `pnpm build` before `cargo build` — `rust-embed` bake
 
 ## How it works
 
-```
-abtop (library)                 abtop-web-ui
-  App + collectors  ──reused──►  main thread: App::tick_no_summaries() every --interval
-  Snapshot DTO                               → serde_json → shared RwLock<String> cache
-                                 HTTP threads: GET /            embedded React SPA
-                                               GET /api/snapshot JSON (poll)
-                                               GET /api/stream   SSE (realtime)
-                                               POST /api/login   cookie session
+```mermaid
+flowchart LR
+  subgraph ABTOP["abtop · library (reused in-process)"]
+    COL["App + collectors<br/>~/.claude · /proc · ports"]
+    DTO["Snapshot DTO"]
+  end
+
+  subgraph MAIN["abtop-web-ui · main thread"]
+    TICK["tick_no_summaries() every --interval<br/>→ to_snapshot() → serde_json"]
+  end
+
+  CACHE[("shared cache<br/>Arc&lt;RwLock&lt;String&gt;&gt;")]
+
+  subgraph HTTP["abtop-web-ui · HTTP threads (read cache only)"]
+    R2["GET /api/snapshot · JSON poll"]
+    R3["GET /api/stream · SSE realtime"]
+    R1["GET / · embedded React SPA"]
+    R4["POST /api/login · cookie session"]
+  end
+
+  USER(["Browser"])
+
+  COL --> TICK
+  DTO --> TICK
+  TICK -->|write each tick| CACHE
+  CACHE -->|read| R2
+  CACHE -->|read| R3
+  R1 --> USER
+  R2 --> USER
+  R3 --> USER
+  USER -->|credentials| R4
 ```
 
 - **`abtop::App` is not `Send`** (it owns boxed collector trait objects), so it lives

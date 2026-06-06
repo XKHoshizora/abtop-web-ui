@@ -85,6 +85,46 @@ abtop-web-ui --demo      # 用演示数据体验 —— 不需要任何在跑的
 预编译二进制由发布工作流在每个 `v*` tag 上发布到
 [GitHub Releases](https://github.com/XKHoshizora/abtop-web-ui/releases)。(Windows:请从源码构建。)
 
+## 🤖 让 AI agent 帮你安装部署
+
+想让 AI 编码 agent 帮你把它装好?把下面这段 prompt 复制给 **Claude Code**、**Codex**、
+**OpenCode**(或任意 agent)——它会装好二进制、问你想怎么跑,在你确认计划后替你执行。
+
+```text
+你正在帮我在这台机器上安装并运行 **abtop-web-ui**。它是一个本地优先的 Web 仪表盘,用来
+监控运行在*本机*上的每一个 AI 编码 agent(Claude Code、Codex CLI、OpenCode)——状态、
+token、上下文、端口、MCP 服务器等,实时推送到浏览器,前面有登录页守着。
+项目地址:https://github.com/XKHoshizora/abtop-web-ui
+
+权威信息源(如果你能抓取网页,请先读它们;否则按下面的步骤执行):
+- README:   https://github.com/XKHoshizora/abtop-web-ui#readme
+- 安装脚本: https://raw.githubusercontent.com/XKHoshizora/abtop-web-ui/master/install.sh
+
+安装(Linux / macOS,x86_64 / arm64):
+  curl --proto '=https' --tlsv1.2 -LsSf https://raw.githubusercontent.com/XKHoshizora/abtop-web-ui/master/install.sh | sh
+脚本会把二进制装到 ~/.local/bin(预编译二进制已自带所需的一切,无需额外依赖)。Windows
+请按 README 从源码构建。装好后用 `abtop-web-ui --version` 验证,并可以给我演示一下无真实
+数据的 demo:`abtop-web-ui --demo --open`。
+
+然后问我想怎么跑:
+- 前台 / 先试试:  abtop-web-ui --open   -> http://127.0.0.1:8787
+- 装成后台服务(`abtop-web-ui deploy`,systemd,Linux):问我要
+    - 本地(local)  —— 绑定 127.0.0.1、不设密码,我通过 SSH 隧道访问;或
+    - 公网(public)—— 生成一个密码,并打印(或加上 --caddy-append 直接写入)一段针对
+                      我给你的域名的 Caddy TLS 反向代理 vhost。
+
+规则——务必遵守:
+- 它是本地优先的:只能监控*这台*机器上的 agent,而且服务必须以拥有这些 agent 进程的
+  同一个用户身份运行(它要读取该用户的 ~/.claude 和 /proc)。请以我的身份运行,绝不用 root。
+- `deploy` 会用 sudo 执行特权步骤(systemd、Caddy)。先把计划给我看——运行
+  `abtop-web-ui deploy --dry-run <参数>` 让我过目——只有在我确认之后,才执行特权或对外
+  暴露的步骤。
+- 没有 TLS 和密码,绝不要把它暴露到公网。快照里含有 cwd 路径、端口、PID 和(已脱敏的)
+  prompt 文本。
+
+我确认计划之后,你就自己把它执行完——运行命令、处理好 PATH/sudo,等仪表盘可访问了再回报我。
+```
+
 ## 部署为服务
 
 `abtop-web-ui deploy` 会安装一个 systemd 服务(Linux)。如果你不传 `--local` / `--public`,
@@ -148,14 +188,37 @@ cargo test                # 鉴权 / 会话单元测试在 src/server.rs
 
 ## 工作原理
 
-```
-abtop(库)                       abtop-web-ui
-  App + 采集器  ──复用──►  主线程:每 --interval 调一次 App::tick_no_summaries()
-  Snapshot DTO                          → serde_json → 共享的 RwLock<String> 缓存
-                            HTTP 线程: GET /            内嵌的 React SPA
-                                       GET /api/snapshot JSON(轮询)
-                                       GET /api/stream   SSE(实时)
-                                       POST /api/login   cookie 会话
+```mermaid
+flowchart LR
+  subgraph ABTOP["abtop · 库(进程内复用)"]
+    COL["App + 采集器<br/>~/.claude · /proc · 端口"]
+    DTO["Snapshot DTO"]
+  end
+
+  subgraph MAIN["abtop-web-ui · 主线程"]
+    TICK["每 --interval 调一次 tick_no_summaries()<br/>→ to_snapshot() → serde_json"]
+  end
+
+  CACHE[("共享缓存<br/>Arc&lt;RwLock&lt;String&gt;&gt;")]
+
+  subgraph HTTP["abtop-web-ui · HTTP 线程(只读缓存)"]
+    R2["GET /api/snapshot · JSON 轮询"]
+    R3["GET /api/stream · SSE 实时"]
+    R1["GET / · 内嵌 React SPA"]
+    R4["POST /api/login · cookie 会话"]
+  end
+
+  USER(["浏览器"])
+
+  COL --> TICK
+  DTO --> TICK
+  TICK -->|每个 tick 写入| CACHE
+  CACHE -->|读取| R2
+  CACHE -->|读取| R3
+  R1 --> USER
+  R2 --> USER
+  R3 --> USER
+  USER -->|凭据| R4
 ```
 
 - **`abtop::App` 不是 `Send`**(它持有装箱的采集器 trait 对象),所以它常驻在主采集线程上。
