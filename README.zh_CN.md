@@ -287,6 +287,16 @@ flowchart LR
 - [XKHoshizora/abtop](https://github.com/XKHoshizora/abtop)——补上本工具所需库接口
   (`Snapshot`、`App::to_snapshot`、`tick_no_summaries`)的 fork。
 
+## Star 趋势
+
+<a href="https://www.star-history.com/?repos=XKHoshizora%2Fabtop-web-ui&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=XKHoshizora/abtop-web-ui&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=XKHoshizora/abtop-web-ui&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=XKHoshizora/abtop-web-ui&type=date&legend=top-left" />
+ </picture>
+</a>
+
 ## 许可证
 
 MIT —— 见 [LICENSE](LICENSE)。
