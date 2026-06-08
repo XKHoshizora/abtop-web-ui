@@ -42,13 +42,15 @@ cargo test ct_eq_matches_and_rejects       # single test by name
 Flags: `--host` (127.0.0.1), `--port` (8787), `--interval` (2s), `--open`, `--demo`,
 `--password` / `ABTOP_WEB_PASSWORD`, `ABTOP_WEB_USERNAME` (env, default `admin`).
 
-## Hard dependency: the abtop *fork*
+## Hard dependency: the abtop *library* (upstream)
 
-`Cargo.toml` pulls `abtop = { path = "../abtop" }`. This requires the
-[`XKHoshizora/abtop`](https://github.com/XKHoshizora/abtop) fork, **not** upstream
-`graykode/abtop` (binary-only, no library surface). The fork adds: `pub mod` exports +
-`src/snapshot.rs` (`Snapshot` / `App::to_snapshot`) + `App::tick_no_summaries` +
-`#[derive(Serialize)]` on the model types.
+`Cargo.toml` pulls `abtop = { git = "https://github.com/graykode/abtop", tag = "v0.4.8" }`.
+The library surface it needs — `pub mod` exports + `src/snapshot.rs`
+(`Snapshot` / `App::to_snapshot`) + `App::tick_no_summaries` + `#[derive(Serialize)]`
+on the model types — was contributed via [graykode/abtop#133](https://github.com/graykode/abtop/pull/133)
+and first released in **v0.4.8**, so this now depends on **upstream**, not the
+`XKHoshizora/abtop` fork. Bump the `tag` to track new abtop releases. For hacking on
+abtop locally, swap in `abtop = { path = "../abtop" }`.
 
 ## Architecture — the load-bearing invariants
 
