@@ -29,6 +29,7 @@ export function useSnapshot(active: boolean): SnapshotState {
     let stopped = false
     let pollTimer: number | null = null
     let es: EventSource | null = null
+    let sseWatchdog: number | null = null
 
     const stopPolling = () => {
       if (pollTimer != null) {
@@ -56,8 +57,20 @@ export function useSnapshot(active: boolean): SnapshotState {
       pollTimer = window.setInterval(tick, POLL_INTERVAL)
     }
 
+    const clearWatchdog = () => {
+      if (sseWatchdog != null) {
+        window.clearTimeout(sseWatchdog)
+        sseWatchdog = null
+      }
+    }
+
     if ('EventSource' in window) {
       es = new EventSource('/api/stream')
+      // If SSE delivers no frame within a few seconds (a stalled stream — seen on
+      // some Windows/proxy setups, where the connection sits "connecting" without
+      // firing onmessage OR onerror), start polling in parallel so data still
+      // flows. A later SSE frame stops the poll again.
+      sseWatchdog = window.setTimeout(startPolling, 4000)
       es.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data)
@@ -65,6 +78,7 @@ export function useSnapshot(active: boolean): SnapshotState {
           // emitted before the server's first tick) — accepting one would blank
           // the dashboard.
           if (!data || !Array.isArray(data.sessions)) return
+          clearWatchdog()
           stopPolling()
           setSnap(data as Snapshot)
           setConnected(true)
@@ -83,6 +97,7 @@ export function useSnapshot(active: boolean): SnapshotState {
 
     return () => {
       stopped = true
+      clearWatchdog()
       es?.close()
       stopPolling()
     }
