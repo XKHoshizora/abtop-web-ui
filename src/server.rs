@@ -15,12 +15,12 @@
 use crate::monitor::SnapshotCache;
 use rust_embed::RustEmbed;
 use std::collections::HashMap;
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
-use tiny_http::{Header, Method, Request, Response, Server, StatusCode};
+use tiny_http::{Header, Method, Request, Response, Server};
 
 /// The production SPA build, embedded at compile time. Run `pnpm build` in
 /// `web/` before `cargo build` so this directory exists.
@@ -269,20 +269,30 @@ fn handle(mut req: Request, cache: SnapshotCache, push_interval: Duration, auth:
         }
 
         (Method::Get, "/api/stream") => {
-            let reader = SseReader::new(cache, push_interval);
-            let resp = Response::new(
-                StatusCode(200),
-                vec![
-                    header("Content-Type", "text/event-stream"),
-                    header("Cache-Control", "no-cache"),
-                    header("Connection", "keep-alive"),
-                    header("X-Accel-Buffering", "no"),
-                ],
-                reader,
-                None,
-                None,
-            );
-            let _ = req.respond(resp);
+            // Stream Server-Sent Events by writing straight to the socket and
+            // flushing after EVERY frame. tiny_http's buffered `Response` only
+            // flushes once its internal buffer fills (~8KB), so for a small
+            // (e.g. zero-session) snapshot the first frame could be delayed by
+            // ~a minute. Raw write + per-frame flush keeps the stream live
+            // regardless of payload size.
+            let mut w = req.into_writer();
+            let head = "HTTP/1.1 200 OK\r\n\
+                        Content-Type: text/event-stream\r\n\
+                        Cache-Control: no-cache\r\n\
+                        Connection: keep-alive\r\n\
+                        X-Accel-Buffering: no\r\n\r\n";
+            if w.write_all(head.as_bytes()).is_err() || w.flush().is_err() {
+                return;
+            }
+            loop {
+                let frame = format!("data: {}\n\n", read_cache(&cache));
+                // A write/flush error means the client disconnected — stop so
+                // the handler thread (and its connection slot) gets freed.
+                if w.write_all(frame.as_bytes()).is_err() || w.flush().is_err() {
+                    return;
+                }
+                thread::sleep(push_interval);
+            }
         }
 
         // Unknown API path → JSON 404 (don't fall through to the SPA shell).
@@ -426,59 +436,6 @@ fn ct_eq(a: &[u8], b: &[u8]) -> bool {
         diff |= x ^ y;
     }
     diff == 0
-}
-
-// ---------------------------------------------------------------------------
-// SSE
-// ---------------------------------------------------------------------------
-
-/// An endless `Read` that yields one SSE `data:` frame per `interval`. The
-/// first frame is immediate; snapshots are single-line JSON so each fits one
-/// `data:` field.
-struct SseReader {
-    cache: SnapshotCache,
-    interval: Duration,
-    frame: Vec<u8>,
-    pos: usize,
-    primed: bool,
-}
-
-impl SseReader {
-    fn new(cache: SnapshotCache, interval: Duration) -> Self {
-        Self {
-            cache,
-            interval,
-            frame: Vec::new(),
-            pos: 0,
-            primed: false,
-        }
-    }
-
-    fn next_frame(&mut self) {
-        if self.primed {
-            thread::sleep(self.interval);
-        }
-        self.primed = true;
-        let json = read_cache(&self.cache);
-        let mut frame = String::with_capacity(json.len() + 8);
-        frame.push_str("data: ");
-        frame.push_str(&json);
-        frame.push_str("\n\n");
-        self.frame = frame.into_bytes();
-        self.pos = 0;
-    }
-}
-
-impl Read for SseReader {
-    fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
-        if self.pos >= self.frame.len() {
-            self.next_frame();
-        }
-        let n = std::cmp::min(out.len(), self.frame.len() - self.pos);
-        out[..n].copy_from_slice(&self.frame[self.pos..self.pos + n]);
-        self.pos += n;
-        Ok(n)
-    }
 }
 
 #[cfg(test)]
