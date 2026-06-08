@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "dependencyDashboard": true,
+  "enabledManagers": ["cargo"],
+  "packageRules": [
+    {
+      "description": "Only track the abtop library dependency (ignore other crates)",
+      "matchPackageNames": ["/.*/"],
+      "enabled": false
+    },
+    {
+      "description": "Auto-merge abtop releases once CI is green (upstream graykode/abtop git tag)",
+      "matchPackageNames": ["abtop"],
+      "enabled": true,
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    }
+  ]
+}
