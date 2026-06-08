@@ -66,11 +66,10 @@ timeline and the recent chat tail:
 
 ## Requirements
 
-- **The [`XKHoshizora/abtop`](https://github.com/XKHoshizora/abtop) fork** — not
-  upstream `graykode/abtop`. The fork adds the library surface (`App::to_snapshot`,
-  `Snapshot`, `tick_no_summaries`) this tool builds on. Prebuilt binaries already
-  bundle it; you only need it checked out (as a sibling `../abtop` directory) to
-  build from source.
+- **Upstream [`abtop`](https://github.com/graykode/abtop) ≥ v0.4.8** — this tool builds
+  on abtop's library API (`App::to_snapshot`, `Snapshot`, `tick_no_summaries`),
+  upstreamed in v0.4.8. It's pulled automatically as a git dependency, so there's
+  nothing to install separately; prebuilt binaries bundle it.
 - **Linux** for host CPU / MEM / load vitals (read from `/proc`). macOS binaries run
   fine but without system metrics.
 - **`abtop --setup`** *(optional)* to enable Claude rate-limit tracking — it installs
@@ -201,14 +200,16 @@ pre-append backup is at `/etc/caddy/Caddyfile.bak-abtop-deploy`.
 ## Build from source
 
 The frontend (`web/`, Vite + React + TypeScript + Ant Design) is built to `web/dist`
-and **embedded into the Rust binary**, so build it first. You also need the abtop
-fork checked out next to this repo:
+and **embedded into the Rust binary**, so build it first. The `abtop` library is
+pulled automatically from git (pinned in `Cargo.toml`) — no sibling checkout needed:
 
 ```bash
-git clone https://github.com/XKHoshizora/abtop ../abtop   # the fork, as a sibling dir
 cd web && pnpm install && pnpm build      # → web/dist  (must run before cargo)
 cd .. && cargo run --release -- --open    # serves http://127.0.0.1:8787/
 ```
+
+> Hacking on `abtop` itself? Point the dependency at a local checkout —
+> `abtop = { path = "../abtop" }` in `Cargo.toml`.
 
 ## Development
 
@@ -305,9 +306,9 @@ public exposure. Binding to a non-local `--host` without a password prints a war
 
 ## Related
 
-- [abtop](https://github.com/graykode/abtop) — the upstream TUI this builds on.
-- [XKHoshizora/abtop](https://github.com/XKHoshizora/abtop) — the fork that adds the
-  library surface (`Snapshot`, `App::to_snapshot`, `tick_no_summaries`) this tool needs.
+- [abtop](https://github.com/graykode/abtop) — the upstream TUI and library this builds
+  on; the `Snapshot` / `App::to_snapshot` / `tick_no_summaries` API landed in v0.4.8
+  ([#133](https://github.com/graykode/abtop/pull/133)).
 
 ## Star History
 

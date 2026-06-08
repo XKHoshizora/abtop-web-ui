@@ -58,10 +58,9 @@ React / Ant Design SPA 来呈现。abtop 的 TUI 原封不动。
 
 ## 前置要求
 
-- **[`XKHoshizora/abtop`](https://github.com/XKHoshizora/abtop) 这个 fork**——不是上游的
-  `graykode/abtop`。fork 补上了本工具依赖的库接口(`App::to_snapshot`、`Snapshot`、
-  `tick_no_summaries`)。预编译二进制已经把它打包进去了;只有从源码构建时,才需要把它作为
-  同级目录 `../abtop` 检出。
+- **上游 [`abtop`](https://github.com/graykode/abtop) ≥ v0.4.8**——本工具基于 abtop 的库
+  接口(`App::to_snapshot`、`Snapshot`、`tick_no_summaries`),这套接口已在 v0.4.8 合入上游。
+  它作为 git 依赖自动拉取,无需单独安装;预编译二进制已内置。
 - **Linux** 才有主机 CPU / 内存 / 负载指标(读取自 `/proc`)。macOS 二进制可正常运行,但没有
   系统指标。
 - **`abtop --setup`** *(可选)*,用于启用 Claude 速率限制追踪——它会安装 abtop 读取额度所需的
@@ -183,13 +182,14 @@ rm -f ~/.local/bin/abtop-web-ui          # 如果你用 install.sh 装过
 ## 从源码构建
 
 前端(`web/`,Vite + React + TS + Ant Design)会被构建到 `web/dist` 并**内嵌进 Rust 二进制**,
-所以要先构建它。你还需要把 abtop fork 检出到本仓库旁边:
+所以要先构建它。`abtop` 库会作为 git 依赖自动拉取(版本固定在 `Cargo.toml`),无需克隆同级目录:
 
 ```bash
-git clone https://github.com/XKHoshizora/abtop ../abtop   # fork,作为同级目录
 cd web && pnpm install && pnpm build      # → web/dist(必须在 cargo 之前)
 cd .. && cargo run --release -- --open    # 启动 http://127.0.0.1:8787/
 ```
+
+> 想改 `abtop` 本身?把依赖指到本地检出即可:`Cargo.toml` 里 `abtop = { path = "../abtop" }`。
 
 ## 开发
 
@@ -283,9 +283,9 @@ flowchart LR
 
 ## 相关项目
 
-- [abtop](https://github.com/graykode/abtop)——本项目所基于的上游 TUI。
-- [XKHoshizora/abtop](https://github.com/XKHoshizora/abtop)——补上本工具所需库接口
-  (`Snapshot`、`App::to_snapshot`、`tick_no_summaries`)的 fork。
+- [abtop](https://github.com/graykode/abtop)——本项目所基于的上游 TUI 与库;
+  `Snapshot` / `App::to_snapshot` / `tick_no_summaries` 接口已在 v0.4.8 合入上游
+  ([#133](https://github.com/graykode/abtop/pull/133))。
 
 ## Star 趋势
 

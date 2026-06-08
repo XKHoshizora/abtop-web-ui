@@ -1,8 +1,8 @@
 name: Release
 
 # Build prebuilt binaries and publish them to a GitHub Release on a version tag.
-# abtop-web-ui needs TWO build steps (frontend then Rust) and the abtop fork as a
-# sibling crate, so this is hand-written rather than cargo-dist.
+# abtop-web-ui needs two build steps (frontend then Rust), so this is hand-written
+# rather than cargo-dist. The abtop library is fetched from git (pinned in Cargo.toml).
 #
 # Every target builds target-aware (`cargo build --target`). x86_64 macOS is
 # cross-compiled on the Apple-Silicon runner: the macos-13 (Intel) image is
@@ -39,21 +39,14 @@ jobs:
             os: macos-14
     runs-on: ${{ matrix.os }}
     steps:
-      # Check out both crates as siblings so Cargo.toml's `abtop = { path = "../abtop" }`
-      # resolves (web-ui/ + abtop/ under the workspace). On workflow_dispatch, build
-      # the requested tag's source; on tag push, the pushed tag.
+      # cargo fetches the abtop library from git (pinned in Cargo.toml), so only this
+      # repo is checked out. On workflow_dispatch, build the requested tag's source;
+      # on tag push, the pushed tag.
       - name: Checkout abtop-web-ui
         uses: actions/checkout@v6
         with:
           path: web-ui
           ref: ${{ inputs.tag || github.ref }}
-
-      - name: Checkout abtop fork
-        uses: actions/checkout@v6
-        with:
-          repository: XKHoshizora/abtop
-          ref: master
-          path: abtop
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
