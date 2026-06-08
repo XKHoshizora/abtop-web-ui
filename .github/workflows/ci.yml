@@ -43,4 +43,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build + test
-        run: cargo test --locked
+        # No --locked: Renovate's regex manager bumps the abtop tag in Cargo.toml
+        # but not Cargo.lock, so let cargo refresh the lock during the build.
+        run: cargo test

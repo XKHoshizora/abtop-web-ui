@@ -2,17 +2,24 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "dependencyDashboard": true,
-  "enabledManagers": ["cargo"],
+  "enabledManagers": ["custom.regex"],
+  "customManagers": [
+    {
+      "description": "Track the abtop git-tag dependency in Cargo.toml via graykode/abtop GitHub tags (the native cargo manager ignores git deps)",
+      "customType": "regex",
+      "managerFilePatterns": ["/Cargo\\.toml$/"],
+      "matchStrings": [
+        "git\\s*=\\s*\"https://github\\.com/graykode/abtop\"\\s*,\\s*tag\\s*=\\s*\"(?<currentValue>v[^\"]+)\""
+      ],
+      "depNameTemplate": "graykode/abtop",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    }
+  ],
   "packageRules": [
     {
-      "description": "Only track the abtop library dependency (ignore other crates)",
-      "matchPackageNames": ["/.*/"],
-      "enabled": false
-    },
-    {
-      "description": "Auto-merge abtop releases once CI is green (upstream graykode/abtop git tag)",
-      "matchPackageNames": ["abtop"],
-      "enabled": true,
+      "description": "Auto-merge upstream abtop releases once CI is green",
+      "matchPackageNames": ["graykode/abtop"],
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": true
