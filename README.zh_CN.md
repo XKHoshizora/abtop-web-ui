@@ -189,6 +189,12 @@ cd web && pnpm install && pnpm build      # → web/dist(必须在 cargo 之前)
 cd .. && cargo run --release -- --open    # 启动 http://127.0.0.1:8787/
 ```
 
+> **Windows** 上 Rust 编译需要 C/C++ 链接器:安装 **Visual Studio Build Tools** 并勾选
+> *使用 C++ 的桌面开发* 工作负载(为默认的 `x86_64-pc-windows-msvc` 目标提供 `link.exe`),
+> 或改用 MinGW-w64 工具链 `rustup default stable-x86_64-pc-windows-gnu`。另外:仪表盘的会话
+> 与主机指标在 Linux/macOS 上表现最佳——主机指标仅 Linux 可用,OpenCode 检测需要 `PATH` 里有
+> `sqlite3`。
+
 > 想改 `abtop` 本身?把依赖指到本地检出即可:`Cargo.toml` 里 `abtop = { path = "../abtop" }`。
 
 ## 开发

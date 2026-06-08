@@ -25,7 +25,9 @@ case "$os" in
       *) echo "unsupported architecture: $arch" >&2; exit 1 ;;
     esac ;;
   *)
-    echo "unsupported OS: $os (Linux and macOS only; on Windows build from source)" >&2
+    echo "No prebuilt binary for $os — Linux and macOS only." >&2
+    echo "Windows: build from source. See the 'Build from source' section at" >&2
+    echo "  https://github.com/XKHoshizora/abtop-web-ui#build-from-source" >&2
     exit 1 ;;
 esac
 

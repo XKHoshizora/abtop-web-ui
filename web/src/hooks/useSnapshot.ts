@@ -45,7 +45,7 @@ export function useSnapshot(active: boolean): SnapshotState {
         if (r === 'unauthorized') {
           setUnauthorized(true)
           setConnected(false)
-        } else if (r) {
+        } else if (r && Array.isArray(r.sessions)) {
           setSnap(r)
           setConnected(true)
         } else {
@@ -59,9 +59,14 @@ export function useSnapshot(active: boolean): SnapshotState {
     if ('EventSource' in window) {
       es = new EventSource('/api/stream')
       es.onmessage = (e) => {
-        stopPolling()
         try {
-          setSnap(JSON.parse(e.data) as Snapshot)
+          const data = JSON.parse(e.data)
+          // Ignore frames that aren't a real snapshot (e.g. a placeholder "{}"
+          // emitted before the server's first tick) — accepting one would blank
+          // the dashboard.
+          if (!data || !Array.isArray(data.sessions)) return
+          stopPolling()
+          setSnap(data as Snapshot)
           setConnected(true)
           setUnauthorized(false)
         } catch {

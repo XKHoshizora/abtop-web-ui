@@ -198,6 +198,17 @@ fn main() {
     // HTTP on background threads; the collector loop owns the main thread
     // (App is not Send and must stay where it was created).
     let interval = Duration::from_secs(args.interval);
+
+    // Seed the cache with a valid (empty) snapshot BEFORE accepting connections,
+    // so the SPA renders immediately ("no sessions yet") instead of receiving the
+    // placeholder "{}" — which it cannot parse as a Snapshot — while the first
+    // collector tick warms up (that first tick can be slow, e.g. on Windows).
+    if let Ok(json) = serde_json::to_string(&app.to_snapshot(interval.as_millis() as u64)) {
+        if let Ok(mut slot) = cache.write() {
+            *slot = json;
+        }
+    }
+
     server::spawn(server, cache.clone(), interval, auth);
     monitor::run(app, cache, interval, args.demo);
 }

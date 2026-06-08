@@ -67,7 +67,17 @@ export default function Dashboard({ onSignedOut }: { onSignedOut: () => void }) 
         <section>
           <SectionTitle count={sessions.length}>{t('dash.sessions')}</SectionTitle>
           {sessions.length === 0 ? (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('dash.noSessions')} style={{ padding: '40px 0', color: 'var(--text-3)' }} />
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={
+                <span>
+                  {t('dash.noSessions')}
+                  <br />
+                  <span style={{ fontSize: 12, color: 'var(--text-4)' }}>{t('dash.noSessionsHint')}</span>
+                </span>
+              }
+              style={{ padding: '40px 0', color: 'var(--text-3)' }}
+            />
           ) : (
             <div
               style={{

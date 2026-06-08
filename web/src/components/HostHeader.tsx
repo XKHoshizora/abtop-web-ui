@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { App as AntApp, Button, Segmented, Tooltip } from 'antd'
 import { BulbOutlined, LogoutOutlined } from '@ant-design/icons'
 import type { Snapshot } from '../types'
@@ -19,9 +20,18 @@ export function HostHeader({
   const { message } = AntApp.useApp()
   const t = useT()
   const { lang, setLang, mode, setMode } = usePrefs()
+
+  // A live wall clock so the "connected" indicator visibly ticks every second,
+  // decoupled from the snapshot cadence (which lags when collection is slow).
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
   const host = snap?.host ?? null
   const agg = snap?.aggregate
-  const updated = snap ? new Date(snap.generated_at_ms).toLocaleTimeString() : '—'
+  const clock = new Date(now).toLocaleTimeString()
   const perSec = ((snap?.token_rate ?? 0) * 1000) / Math.max(1, snap?.interval_ms ?? 2000)
 
   const signOut = async () => {
@@ -57,15 +67,19 @@ export function HostHeader({
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginLeft: 6 }}>
-        <Pill label={t('hdr.cpu')} accent="var(--accent)">
-          {host ? <AnimatedNumber value={host.cpu_pct} format={(n) => `${n.toFixed(0)}%`} /> : 'n/a'}
-        </Pill>
-        <Pill label={t('hdr.mem')}>
-          {host ? <AnimatedNumber value={host.mem_pct} format={(n) => `${n.toFixed(0)}%`} /> : 'n/a'}
-        </Pill>
-        <Pill label={t('hdr.load')}>{host ? host.load1.toFixed(2) : 'n/a'}</Pill>
+        <Tooltip title={host ? undefined : t('hdr.hostLinuxOnly')}>
+          <span style={{ display: 'flex', gap: 8 }}>
+            <Pill label={t('hdr.cpu')} accent="var(--accent)">
+              {host ? <AnimatedNumber value={host.cpu_pct} format={(n) => `${n.toFixed(0)}%`} /> : 'n/a'}
+            </Pill>
+            <Pill label={t('hdr.mem')}>
+              {host ? <AnimatedNumber value={host.mem_pct} format={(n) => `${n.toFixed(0)}%`} /> : 'n/a'}
+            </Pill>
+            <Pill label={t('hdr.load')}>{host ? host.load1.toFixed(2) : 'n/a'}</Pill>
+          </span>
+        </Tooltip>
         <Pill label={t('hdr.active')} accent="var(--accent-2)">
-          {agg?.active_count ?? 0} / {snap?.sessions.length ?? 0}
+          {agg?.active_count ?? 0} / {snap?.sessions?.length ?? 0}
         </Pill>
         <Pill label={t('hdr.avgCtx')}>
           <AnimatedNumber value={agg?.avg_ctx_pct ?? 0} format={(n) => `${n.toFixed(0)}%`} />
@@ -80,7 +94,7 @@ export function HostHeader({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span className={connected ? 'conn on' : 'conn off'} />
         <span style={{ fontSize: 12, color: 'var(--text-2)' }}>
-          {connected ? t('hdr.connected', { time: updated }) : t('hdr.disconnected')}
+          {connected ? t('hdr.connected', { time: clock }) : t('hdr.disconnected')}
         </span>
       </div>
 

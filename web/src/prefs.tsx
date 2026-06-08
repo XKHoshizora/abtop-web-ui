@@ -32,6 +32,7 @@ const STR: Record<string, { en: string; zh: string }> = {
   'hdr.rate': { en: 'RATE', zh: '速率' },
   'hdr.connected': { en: 'live · {time}', zh: '已连接 · {time}' },
   'hdr.disconnected': { en: 'reconnecting…', zh: '连接中断 · 重试中' },
+  'hdr.hostLinuxOnly': { en: 'Host metrics are Linux-only', zh: '主机指标仅在 Linux 上可用' },
   'hdr.logout': { en: 'Sign out', zh: '退出登录' },
   'hdr.loggedOut': { en: 'Signed out', zh: '已退出' },
   'hdr.lightMode': { en: 'Light theme', zh: '亮色主题' },
@@ -40,6 +41,10 @@ const STR: Record<string, { en: string; zh: string }> = {
   'dash.rateLimits': { en: 'Rate limits', zh: '账户限流' },
   'dash.sessions': { en: 'Active sessions', zh: '活跃会话' },
   'dash.noSessions': { en: 'No active sessions', zh: '暂无活跃会话' },
+  'dash.noSessionsHint': {
+    en: 'Sessions appear here once a Claude Code, Codex, or OpenCode agent is running on this machine.',
+    zh: '在本机启动 Claude Code、Codex 或 OpenCode 后,会话会自动出现在这里。',
+  },
   'dash.orphanPorts': { en: 'Orphan ports', zh: '孤儿端口' },
   'dash.mcp': { en: 'MCP servers', zh: 'MCP 服务' },
   // session card / detail

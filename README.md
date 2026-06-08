@@ -208,6 +208,13 @@ cd web && pnpm install && pnpm build      # → web/dist  (must run before cargo
 cd .. && cargo run --release -- --open    # serves http://127.0.0.1:8787/
 ```
 
+> **Windows** needs a C/C++ linker for the Rust build: install **Visual Studio
+> Build Tools** with the *Desktop development with C++* workload (provides
+> `link.exe` for the default `x86_64-pc-windows-msvc` target), or use a MinGW-w64
+> toolchain with `rustup default stable-x86_64-pc-windows-gnu`. Note the dashboard
+> shows agent sessions and host metrics best on Linux/macOS — host metrics are
+> Linux-only, and OpenCode discovery needs `sqlite3` on `PATH`.
+
 > Hacking on `abtop` itself? Point the dependency at a local checkout —
 > `abtop = { path = "../abtop" }` in `Cargo.toml`.
 
