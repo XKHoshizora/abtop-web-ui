@@ -2,7 +2,7 @@ import { BorderBeam, Card, Tag, Tooltip } from 'antd'
 import { motion } from 'framer-motion'
 import type { SessionView } from '../types'
 import { STATUS_META, agentColor, fmtAge, fmtTokens, shortId } from '../lib/format'
-import { useT } from '../prefs'
+import { usePrefs, useT } from '../prefs'
 import { StatusDot } from './StatusDot'
 import { ContextBar } from './ContextBar'
 import { AnimatedNumber } from './AnimatedNumber'
@@ -31,7 +31,11 @@ export function SessionCard({
   onClick?: () => void
 }) {
   const t = useT()
+  const { mode } = usePrefs()
   const meta = STATUS_META[s.status] ?? STATUS_META.Unknown
+  // The pastel status colors disappear against the light glass card, so the
+  // beam switches to a saturated variant there.
+  const beamColor = (mode === 'light' && meta.beamLight) || meta.color
   const agentCol = agentColor(s.agent_cli)
   // The one line that answers "what is this agent doing right now".
   const doing = s.current_task || s.summary || '—'
@@ -192,7 +196,7 @@ export function SessionCard({
       {meta.active ? (
         // Animated "beam" running along the border while the agent is
         // actively working — instant visual cue for which cards are live.
-        <BorderBeam color={meta.color}>{card}</BorderBeam>
+        <BorderBeam color={beamColor}>{card}</BorderBeam>
       ) : (
         card
       )}
