@@ -6,7 +6,7 @@
 
 [![Release](https://img.shields.io/github/v/release/XKHoshizora/abtop-web-ui)](https://github.com/XKHoshizora/abtop-web-ui/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS-informational)
+![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-informational)
 
 [abtop](https://github.com/graykode/abtop) 的本地优先 **Web UI**——把每一个 Claude Code、
 Codex CLI、OpenCode 会话汇聚到一个实时仪表盘:状态、token、上下文、速率限制、子进程、
@@ -30,7 +30,8 @@ React / Ant Design SPA 来呈现。abtop 的 TUI 原封不动。
   会话的压缩(compaction)次数。
 - **账户速率限制**——Claude 的 5 小时与 7 天窗口,以填充条 + 重置倒计时呈现(需要
   `abtop --setup`)。
-- **主机指标**——头部显示 CPU %、内存 % 和 1 分钟负载(仅 Linux)。
+- **主机指标**——头部显示 CPU %、内存 % 和 1 分钟负载(Linux 与 Windows;Windows 没有
+  负载平均值,LOAD 显示为 0)。
 - **开放端口与孤儿端口**——会话结束后仍在监听的端口,带 PID、命令和所属项目。
 - **MCP 服务器**——检测到的 MCP 服务器,含父 CLI、profile 和 rollout 活动。
 - **真正的登录页**——用户名 + 密码 + cookie 会话,而不是浏览器原生的 Basic-Auth 弹窗。
@@ -61,8 +62,10 @@ React / Ant Design SPA 来呈现。abtop 的 TUI 原封不动。
 - **上游 [`abtop`](https://github.com/graykode/abtop) ≥ v0.4.8**——本工具基于 abtop 的库
   接口(`App::to_snapshot`、`Snapshot`、`tick_no_summaries`),这套接口已在 v0.4.8 合入上游。
   它作为 git 依赖自动拉取,无需单独安装;预编译二进制已内置。
-- **Linux** 才有主机 CPU / 内存 / 负载指标(读取自 `/proc`)。macOS 二进制可正常运行,但没有
-  系统指标。
+- **Linux 或 Windows** 才有主机 CPU / 内存指标(Linux 读取 `/proc`,Windows 通过
+  `sysinfo`,需要新于 v0.4.8 的 abtop)。macOS 二进制可正常运行,但没有系统指标。
+- **仅 Windows:**OpenCode 会话检测需要 `PATH` 里有 `sqlite3` CLI
+  (`winget install SQLite.SQLite`);缺失时会在 stderr 打印一次性警告说明原因。
 - **`abtop --setup`** *(可选)*,用于启用 Claude 速率限制追踪——它会安装 abtop 读取额度所需的
   状态栏钩子。
 
@@ -191,9 +194,9 @@ cd .. && cargo run --release -- --open    # 启动 http://127.0.0.1:8787/
 
 > **Windows** 上 Rust 编译需要 C/C++ 链接器:安装 **Visual Studio Build Tools** 并勾选
 > *使用 C++ 的桌面开发* 工作负载(为默认的 `x86_64-pc-windows-msvc` 目标提供 `link.exe`),
-> 或改用 MinGW-w64 工具链 `rustup default stable-x86_64-pc-windows-gnu`。另外:仪表盘的会话
-> 与主机指标在 Linux/macOS 上表现最佳——主机指标仅 Linux 可用,OpenCode 检测需要 `PATH` 里有
-> `sqlite3`。
+> 或改用 MinGW-w64 工具链 `rustup default stable-x86_64-pc-windows-gnu`。主机指标在 Windows
+> 上原生可用(通过 `sysinfo`);OpenCode 检测需要 `PATH` 里有 `sqlite3`
+> (`winget install SQLite.SQLite`)。
 
 > 想改 `abtop` 本身?把依赖指到本地检出即可:`Cargo.toml` 里 `abtop = { path = "../abtop" }`。
 
@@ -267,7 +270,8 @@ flowchart LR
 - 鉴权是带真正登录页的 **cookie 会话**——没有 Basic-Auth 弹窗。不带 `--password` 时,鉴权关闭
   (localhost 默认行为)。
 - **本地优先**:它监控自己所在机器上的 agent(`~/.claude`、`/proc`、端口),无法监控另一台主机上
-  的 agent——agent 在哪,就把它跑在哪。速率限制数据需要 `abtop --setup`;主机指标仅 Linux。
+  的 agent——agent 在哪,就把它跑在哪。速率限制数据需要 `abtop --setup`;主机指标仅
+  Linux/Windows 可用。
 
 ## 远程访问与安全
 

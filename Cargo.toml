@@ -10,9 +10,12 @@ repository = "https://github.com/XKHoshizora/abtop-web-ui"
 [dependencies]
 # Reuse abtop's data-collection layer in-process (no subprocess, no re-scan).
 # Upstream library API (merged in graykode/abtop#133, first released in v0.4.8).
-# Bump the tag to track new abtop releases. For hacking on abtop locally, swap in:
+# TEMPORARY: pinned to the XKHoshizora fork for the Windows fixes (host metrics
+# via sysinfo + OpenCode discovery, XKHoshizora/abtop#1). Switch back to
+#   abtop = { git = "https://github.com/graykode/abtop", tag = "v0.4.X" }
+# once those fixes land in an upstream release. For hacking on abtop locally:
 #   abtop = { path = "../abtop" }
-abtop = { git = "https://github.com/graykode/abtop", tag = "v0.4.8" }
+abtop = { git = "https://github.com/XKHoshizora/abtop", rev = "631c52a5e70a501888a76e8cc63de37e2ae15e40" }
 tiny_http = "0.12"
 serde_json = "1"
 # Embed the built SPA (web/dist) into the binary; run `pnpm build` in web/ first.

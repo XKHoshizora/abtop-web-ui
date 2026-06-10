@@ -32,7 +32,10 @@ const STR: Record<string, { en: string; zh: string }> = {
   'hdr.rate': { en: 'RATE', zh: '速率' },
   'hdr.connected': { en: 'live · {time}', zh: '已连接 · {time}' },
   'hdr.disconnected': { en: 'reconnecting…', zh: '连接中断 · 重试中' },
-  'hdr.hostLinuxOnly': { en: 'Host metrics are Linux-only', zh: '主机指标仅在 Linux 上可用' },
+  'hdr.hostLinuxOnly': {
+    en: 'Host metrics are not available on this platform (Linux and Windows only)',
+    zh: '主机指标在此平台不可用(仅支持 Linux 和 Windows)',
+  },
   'hdr.logout': { en: 'Sign out', zh: '退出登录' },
   'hdr.loggedOut': { en: 'Signed out', zh: '已退出' },
   'hdr.lightMode': { en: 'Light theme', zh: '亮色主题' },

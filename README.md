@@ -6,7 +6,7 @@
 
 [![Release](https://img.shields.io/github/v/release/XKHoshizora/abtop-web-ui)](https://github.com/XKHoshizora/abtop-web-ui/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS-informational)
+![Platforms](https://img.shields.io/badge/platforms-Linux%20%7C%20macOS%20%7C%20Windows-informational)
 
 A local-first **web UI** for [abtop](https://github.com/graykode/abtop) — every
 Claude Code, Codex CLI, and OpenCode session in one live dashboard: status, tokens,
@@ -33,7 +33,8 @@ that is embedded into the binary. The abtop TUI is untouched.
   tokens/second rate, and per-session compaction counts.
 - **Account rate limits** — Claude 5-hour and 7-day windows as fill bars with reset
   countdowns (needs `abtop --setup`).
-- **Host vitals** — CPU %, memory % and 1-minute load in the header (Linux only).
+- **Host vitals** — CPU %, memory % and 1-minute load in the header (Linux & Windows;
+  Windows has no load average, so LOAD reads 0).
 - **Open & orphan ports** — ports left listening by sessions that have ended, with
   PID, command and project.
 - **MCP servers** — detected MCP servers with parent CLI, profile and rollout activity.
@@ -70,8 +71,12 @@ timeline and the recent chat tail:
   on abtop's library API (`App::to_snapshot`, `Snapshot`, `tick_no_summaries`),
   upstreamed in v0.4.8. It's pulled automatically as a git dependency, so there's
   nothing to install separately; prebuilt binaries bundle it.
-- **Linux** for host CPU / MEM / load vitals (read from `/proc`). macOS binaries run
-  fine but without system metrics.
+- **Linux or Windows** for host CPU / MEM vitals (`/proc` on Linux, `sysinfo` on
+  Windows — needs an abtop build newer than v0.4.8). macOS binaries run fine but
+  without system metrics.
+- **Windows only:** OpenCode session discovery needs the `sqlite3` CLI on `PATH`
+  (`winget install SQLite.SQLite`); without it a one-time stderr warning explains
+  why OpenCode sessions are missing.
 - **`abtop --setup`** *(optional)* to enable Claude rate-limit tracking — it installs
   the status-line hook abtop reads quota from.
 
@@ -211,9 +216,9 @@ cd .. && cargo run --release -- --open    # serves http://127.0.0.1:8787/
 > **Windows** needs a C/C++ linker for the Rust build: install **Visual Studio
 > Build Tools** with the *Desktop development with C++* workload (provides
 > `link.exe` for the default `x86_64-pc-windows-msvc` target), or use a MinGW-w64
-> toolchain with `rustup default stable-x86_64-pc-windows-gnu`. Note the dashboard
-> shows agent sessions and host metrics best on Linux/macOS — host metrics are
-> Linux-only, and OpenCode discovery needs `sqlite3` on `PATH`.
+> toolchain with `rustup default stable-x86_64-pc-windows-gnu`. Host metrics work
+> natively (via `sysinfo`); OpenCode discovery needs `sqlite3` on `PATH`
+> (`winget install SQLite.SQLite`).
 
 > Hacking on `abtop` itself? Point the dependency at a local checkout —
 > `abtop = { path = "../abtop" }` in `Cargo.toml`.
@@ -291,7 +296,7 @@ flowchart LR
   `--password`, auth is disabled (the localhost default).
 - **Local-first:** it monitors the agents on the machine it runs on (`~/.claude`,
   `/proc`, ports). It can't watch agents on another host — run it where the agents
-  are. Rate-limit data needs `abtop --setup`; host vitals are Linux-only.
+  are. Rate-limit data needs `abtop --setup`; host vitals are Linux/Windows-only.
 
 ## Remote access & security
 

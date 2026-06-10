@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "abtop"
 version = "0.4.8"
-source = "git+https://github.com/graykode/abtop?tag=v0.4.8#a19ac6589be01ca8d0400515f8a443f8857644fe"
+source = "git+https://github.com/XKHoshizora/abtop?rev=631c52a5e70a501888a76e8cc63de37e2ae15e40#631c52a5e70a501888a76e8cc63de37e2ae15e40"
 dependencies = [
  "chrono",
  "crossterm",
