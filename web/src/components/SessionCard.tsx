@@ -1,4 +1,5 @@
 import { BorderBeam, Card, Tag, Tooltip } from 'antd'
+import type { BorderBeamGradient } from 'antd'
 import { motion } from 'framer-motion'
 import type { SessionView } from '../types'
 import { STATUS_META, agentColor, fmtAge, fmtTokens, shortId } from '../lib/format'
@@ -8,6 +9,21 @@ import { ContextBar } from './ContextBar'
 import { AnimatedNumber } from './AnimatedNumber'
 import { GitBadge } from './GitBadge'
 import { Sparkline } from './Sparkline'
+
+/**
+ * Border-beam gradients for active cards (antd BorderBeam presets):
+ * Aurora reads on the dark glass, Ember on the light one.
+ */
+const BEAM_AURORA: BorderBeamGradient = [
+  { color: '#7c3aed', percent: 0 },
+  { color: '#06b6d4', percent: 57 },
+  { color: '#67e8f9', percent: 100 },
+]
+const BEAM_EMBER: BorderBeamGradient = [
+  { color: '#fa541c', percent: 0 },
+  { color: '#ff7875', percent: 46 },
+  { color: '#ffd666', percent: 100 },
+]
 
 /** Tiny mono label · value pair for the footer strip. */
 function Foot({ label, children }: { label: string; children: React.ReactNode }) {
@@ -33,9 +49,7 @@ export function SessionCard({
   const t = useT()
   const { mode } = usePrefs()
   const meta = STATUS_META[s.status] ?? STATUS_META.Unknown
-  // The pastel status colors disappear against the light glass card, so the
-  // beam switches to a saturated variant there.
-  const beamColor = (mode === 'light' && meta.beamLight) || meta.color
+  const beamColor = mode === 'light' ? BEAM_EMBER : BEAM_AURORA
   const agentCol = agentColor(s.agent_cli)
   // The one line that answers "what is this agent doing right now".
   const doing = s.current_task || s.summary || '—'
@@ -196,7 +210,7 @@ export function SessionCard({
       {meta.active ? (
         // Animated "beam" running along the border while the agent is
         // actively working — instant visual cue for which cards are live.
-        <BorderBeam color={beamColor}>{card}</BorderBeam>
+        <BorderBeam color={beamColor} outset={2}>{card}</BorderBeam>
       ) : (
         card
       )}

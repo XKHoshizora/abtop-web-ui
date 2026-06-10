@@ -25,20 +25,14 @@ export interface StatusMeta {
   color: string
   /** Pulse the indicator for actively-working states. */
   active: boolean
-  /**
-   * Border-beam color for the light theme. The base status colors are
-   * 400-grade pastels that vanish against the light glass card; active
-   * statuses carry a saturated 600/700-grade variant instead.
-   */
-  beamLight?: string
 }
 
 /** Color + pulse per status; the label is translated via t(`status.<name>`). */
 export const STATUS_META: Record<SessionStatus, StatusMeta> = {
-  Thinking: { color: '#38bdf8', active: true, beamLight: '#0284c7' },
-  Executing: { color: '#34d399', active: true, beamLight: '#059669' },
+  Thinking: { color: '#38bdf8', active: true },
+  Executing: { color: '#34d399', active: true },
   Waiting: { color: '#94a3b8', active: false },
-  RateLimited: { color: '#fb7185', active: true, beamLight: '#e11d48' },
+  RateLimited: { color: '#fb7185', active: true },
   Done: { color: '#64748b', active: false },
   Unknown: { color: '#fbbf24', active: false },
 }
