@@ -21,7 +21,7 @@ dependencies = [
 
 [[package]]
 name = "abtop-web-ui"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "abtop",
  "getrandom 0.2.17",
