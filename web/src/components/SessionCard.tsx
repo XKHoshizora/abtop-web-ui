@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { Card, Tag, Tooltip } from 'antd'
 import { motion } from 'framer-motion'
 import type { SessionView } from '../types'
@@ -7,17 +6,18 @@ import { useT } from '../prefs'
 import { StatusDot } from './StatusDot'
 import { ContextBar } from './ContextBar'
 import { AnimatedNumber } from './AnimatedNumber'
-import { ChildRow } from './ChildRow'
 import { GitBadge } from './GitBadge'
+import { Sparkline } from './Sparkline'
 
-function Stat({ label, children }: { label: string; children: ReactNode }) {
+/** Tiny mono label · value pair for the footer strip. */
+function Foot({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <span style={{ fontSize: 10.5, color: 'var(--text-3)', letterSpacing: 0.4 }}>{label}</span>
-      <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, minWidth: 0 }}>
+      <span style={{ fontSize: 9.5, color: 'var(--text-4)', letterSpacing: 0.5 }}>{label}</span>
+      <span className="mono" style={{ fontSize: 11, color: 'var(--text-2)' }}>
         {children}
       </span>
-    </div>
+    </span>
   )
 }
 
@@ -33,6 +33,12 @@ export function SessionCard({
   const t = useT()
   const meta = STATUS_META[s.status] ?? STATUS_META.Unknown
   const agentCol = agentColor(s.agent_cli)
+  // The one line that answers "what is this agent doing right now".
+  const doing = s.current_task || s.summary || '—'
+  const ports = s.children
+    .map((c) => c.port)
+    .filter((p): p is number => p !== null)
+    .slice(0, 2)
 
   return (
     <motion.div
@@ -42,8 +48,13 @@ export function SessionCard({
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ type: 'spring', stiffness: 160, damping: 22, delay: Math.min(index * 0.04, 0.4) }}
     >
-      <Card className="session-card" styles={{ body: { padding: 16 } }} onClick={onClick} style={{ cursor: 'pointer' }}>
-        {/* header row */}
+      <Card
+        className="session-card"
+        styles={{ body: { padding: '13px 15px' } }}
+        onClick={onClick}
+        style={{ cursor: 'pointer' }}
+      >
+        {/* status + agent + age */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <StatusDot color={meta.color} active={meta.active} />
           <span style={{ fontSize: 12, color: meta.color, fontWeight: 600 }}>{t(`status.${s.status}`)}</span>
@@ -53,7 +64,8 @@ export function SessionCard({
               marginInlineEnd: 0,
               color: agentCol,
               background: `${agentCol}1f`,
-              fontSize: 11,
+              fontSize: 10.5,
+              lineHeight: '18px',
               textTransform: 'uppercase',
               letterSpacing: 0.5,
             }}
@@ -61,115 +73,117 @@ export function SessionCard({
             {s.agent_cli}
           </Tag>
           <div style={{ flex: 1 }} />
-          <span className="mono" style={{ fontSize: 12, color: 'var(--text-2)' }}>
+          <span className="mono" style={{ fontSize: 11.5, color: 'var(--text-2)' }}>
             {fmtAge(s.elapsed_secs)}
           </span>
           <span className="card-chevron" style={{ color: 'var(--text-4)', fontSize: 15, lineHeight: 1 }}>›</span>
         </div>
 
-        {/* project + summary */}
-        <div style={{ marginTop: 12 }}>
-          <div className="display" style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.25 }}>
-            {s.project_name || '—'}
-            <span className="mono" style={{ fontSize: 11, color: 'var(--text-4)', marginLeft: 7 }}>
-              {shortId(s.session_id)}
-            </span>
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--bright)', marginTop: 5, minHeight: 18 }}>
-            {s.summary || '—'}
-          </div>
-          {s.current_task && (
-            <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 5 }}>└─ {s.current_task}</div>
-          )}
-        </div>
-
-        {/* context bar */}
-        <div style={{ marginTop: 14, marginBottom: 12 }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: 11,
-              color: 'var(--text-2)',
-              marginBottom: 6,
-            }}
-          >
-            <span>{t('s.context')}</span>
-            <span className="mono">
-              <AnimatedNumber value={s.context_percent} format={(n) => `${n.toFixed(0)}%`} />
-            </span>
-          </div>
-          <ContextBar pct={s.context_percent} />
-        </div>
-
-        {/* stats grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: 10,
-            paddingTop: 12,
-            borderTop: '1px solid var(--line)',
-          }}
-        >
-          <Stat label={t('s.token')}>
-            <span style={{ color: 'var(--accent)' }}>
-              <AnimatedNumber value={s.total_tokens} format={fmtTokens} />
-            </span>
-          </Stat>
-          <Stat label={t('s.mem')}>{s.mem_mb}M</Stat>
-          <Stat label={t('s.turns')}>{s.turn_count}</Stat>
-          <Stat label={t('s.model')}>
-            <Tooltip title={`${s.model}${s.effort ? ' · ' + s.effort : ''}`}>
-              <span style={{ fontSize: 11 }}>{s.model.replace(/^claude-/, '') || '—'}</span>
-            </Tooltip>
-          </Stat>
-        </div>
-
-        {/* git + cwd */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            marginTop: 12,
-            fontSize: 11.5,
-            color: 'var(--text-2)',
-          }}
-        >
-          <GitBadge s={s} />
+        {/* project + git + session id */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10, minWidth: 0 }}>
           <Tooltip title={s.cwd}>
             <span
+              className="display"
               style={{
+                fontSize: 15.5,
+                fontWeight: 600,
+                lineHeight: 1.2,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
-                flex: 1,
-                textAlign: 'right',
               }}
             >
-              {s.cwd}
+              {s.project_name || '—'}
             </span>
           </Tooltip>
+          <GitBadge s={s} />
+          <span className="mono" style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--text-4)', flex: 'none' }}>
+            {shortId(s.session_id)}
+          </span>
         </div>
 
-        {/* children */}
-        {s.children.length > 0 && (
+        {/* "now" line — the at-a-glance focus */}
+        <Tooltip title={doing.length > 60 ? doing : undefined}>
           <div
-            style={{
-              marginTop: 12,
-              paddingTop: 10,
-              borderTop: '1px dashed var(--line)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 5,
-            }}
+            className={meta.active ? 'task-line active' : 'task-line'}
+            style={{ borderLeftColor: meta.color, marginTop: 9 }}
           >
-            {s.children.map((c) => (
-              <ChildRow key={c.pid} c={c} />
-            ))}
+            {doing}
           </div>
-        )}
+        </Tooltip>
+
+        {/* token sparkline + animated counter */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, marginTop: 11 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Sparkline data={s.token_history} color={agentCol} width={220} height={34} fluid />
+          </div>
+          <div style={{ textAlign: 'right', flex: 'none' }}>
+            <div style={{ fontSize: 9.5, color: 'var(--text-3)', letterSpacing: 0.5 }}>{t('s.token')}</div>
+            <div className="mono" style={{ fontSize: 17, fontWeight: 700, color: 'var(--accent)', lineHeight: 1.15 }}>
+              <AnimatedNumber value={s.total_tokens} format={fmtTokens} />
+            </div>
+          </div>
+        </div>
+
+        {/* context bar, inline */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+          <span style={{ fontSize: 9.5, color: 'var(--text-3)', letterSpacing: 0.5, flex: 'none' }}>
+            {t('s.context')}
+          </span>
+          <div style={{ flex: 1 }}>
+            <ContextBar pct={s.context_percent} />
+          </div>
+          <span className="mono" style={{ fontSize: 11, color: 'var(--text-2)', width: 34, textAlign: 'right' }}>
+            <AnimatedNumber value={s.context_percent} format={(n) => `${n.toFixed(0)}%`} />
+          </span>
+        </div>
+
+        {/* footer strip: model · mem · turns · children/ports summary */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 12,
+            marginTop: 11,
+            paddingTop: 9,
+            borderTop: '1px solid var(--line)',
+            whiteSpace: 'nowrap',
+            minWidth: 0,
+          }}
+        >
+          <Tooltip title={`${s.model}${s.effort ? ' · ' + s.effort : ''}`}>
+            <span
+              className="mono"
+              style={{
+                fontSize: 11,
+                color: 'var(--text-2)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                minWidth: 0,
+              }}
+            >
+              {s.model.replace(/^claude-/, '') || '—'}
+            </span>
+          </Tooltip>
+          <Foot label={t('s.mem')}>{s.mem_mb}M</Foot>
+          <Foot label={t('s.turns')}>{s.turn_count}</Foot>
+          <div style={{ flex: 1 }} />
+          {s.children.length > 0 && (
+            <Tooltip
+              title={`${t('card.procs')}: ${s.children.length}`}
+              placement="topRight"
+            >
+              <span className="mono proc-chip">
+                ⚙ {s.children.length}
+                {ports.map((p) => (
+                  <span key={p} style={{ color: 'var(--accent)' }}>
+                    {' '}:{p}
+                  </span>
+                ))}
+              </span>
+            </Tooltip>
+          )}
+        </div>
       </Card>
     </motion.div>
   )

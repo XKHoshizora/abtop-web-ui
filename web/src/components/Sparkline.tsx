@@ -6,11 +6,14 @@ export function Sparkline({
   color = '#22d3ee',
   width = 248,
   height = 44,
+  fluid = false,
 }: {
   data: number[]
   color?: string
   width?: number
   height?: number
+  /** Stretch to the container width (viewBox keeps the data geometry). */
+  fluid?: boolean
 }) {
   const t = useT()
   if (!data || data.length < 2) {
@@ -29,7 +32,13 @@ export function Sparkline({
   const id = `spark-${color.replace('#', '')}`
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+    <svg
+      width={fluid ? undefined : width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      style={fluid ? { width: '100%', height, display: 'block' } : undefined}
+    >
       <defs>
         <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity={0.32} />

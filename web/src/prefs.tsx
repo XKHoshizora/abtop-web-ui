@@ -36,6 +36,7 @@ const STR: Record<string, { en: string; zh: string }> = {
     en: 'Host metrics are not available on this platform (Linux and Windows only)',
     zh: '主机指标在此平台不可用(仅支持 Linux 和 Windows)',
   },
+  'card.procs': { en: 'child processes', zh: '子进程' },
   'hdr.logout': { en: 'Sign out', zh: '退出登录' },
   'hdr.loggedOut': { en: 'Signed out', zh: '已退出' },
   'hdr.lightMode': { en: 'Light theme', zh: '亮色主题' },
